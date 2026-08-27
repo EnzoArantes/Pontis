@@ -1,0 +1,6 @@
+# Runtime + test dependencies. Parsing helpers (openpyxl for CDS workbooks,
+# pypdf for CDS PDFs) are used during ingestion work.
+psycopg[binary]>=3.2
+pytest>=8
+openpyxl>=3.1
+pypdf>=4

@@ -1,0 +1,66 @@
+# CI: the clean-room rebuild, on every push, on Linux.
+#
+# This is deliberately the same sequence a stranger follows from the README --
+# empty Postgres, migrations 001..NNN in filename order, both seeds, full test
+# suite. The database-backed constraint tests (tests/test_db_constraints.py)
+# run for real here against the service container; they skip only where no
+# database exists.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: pontis
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: pontis
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Apply migrations in order
+        run: |
+          for f in schema/*.sql; do
+            echo "== $f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+
+      - name: Seed reference data and schools
+        run: |
+          python ingest/seed_reference.py
+          python ingest/seed_phase1.py
+
+      - name: Validate the batch pipeline (no CSV in CI -- unit layer only)
+        run: python -m pytest tests/test_pipeline.py -q
+
+      - name: Run the full test suite
+        run: python -m pytest -q
