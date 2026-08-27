@@ -47,17 +47,31 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Apply migrations in order
+      # Applied TWICE, then once more after seeding: the chain must CONVERGE,
+      # not merely apply. A destructive step that only bites on re-application
+      # (001's old DROP TYPE CASCADE amputated a v008 column on the second
+      # container boot -- see HARDENING.md) is exactly what a single pass
+      # cannot see.
+      - name: Apply migrations in order, twice
         run: |
-          for f in schema/*.sql; do
-            echo "== $f"
-            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          for round in 1 2; do
+            echo "=== chain round $round"
+            for f in schema/*.sql; do
+              echo "== $f"
+              psql -v ON_ERROR_STOP=1 -q -f "$f"
+            done
           done
 
       - name: Seed reference data and schools
         run: |
           python ingest/seed_reference.py
           python ingest/seed_phase1.py
+
+      - name: Re-apply the chain over seeded data
+        run: |
+          for f in schema/*.sql; do
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
 
       - name: Validate the batch pipeline (no CSV in CI -- unit layer only)
         run: python -m pytest tests/test_pipeline.py -q

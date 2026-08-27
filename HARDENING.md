@@ -58,6 +58,20 @@ was observed to fail, and the change reverted. Mutations run and caught:
    (or a public priced `not_applicable`) satisfied every constraint while being
    a category error. Now locked by `test_residency_labels_cohere_with_school_type`.
 5. **`.gitignore` did not cover `.venv`, caches, or `.env`.**
+6. **The migration chain applied but did not CONVERGE** — two distinct bugs,
+   both invisible to a single clean-room pass and caught by the containerized
+   deployment (whose entrypoint re-applies the chain at every boot):
+   - 001's original `DROP TYPE gpa_type CASCADE` amputated the `gpa_type`
+     column from v008's `gpa_band_distribution` on the second boot — a table
+     001 never mentions, destroyed by cascade across migrations. 001 is now
+     convergent (guarded creates, no drops); full rebuilds belong to
+     `make clean-db`.
+   - 002's drop-and-re-add of `admission_stats_gpa_honesty` rewound the
+     constraint to its pre-'weighted' version, which UMass's legitimate 4.05
+     row then violated mid-chain. 002 now adds that constraint only if
+     absent; v007 owns the final definition.
+   The convergence property is locked in CI: the chain is applied twice from
+   zero and once more over seeded data, on every push.
 
 ## Residual risks, accepted deliberately
 

@@ -1,0 +1,42 @@
+# Pontis on Linux: Postgres 18 + the app image (migrate, seed, serve).
+#
+#   docker compose up --build          # bring up db + API on :8000
+#   docker compose run --rm app test   # full suite against the containerized db
+#
+# No secrets here: the Postgres password below exists only inside this compose
+# network for a local/dev deployment. Anything real supplies POSTGRES_PASSWORD
+# via the environment.
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: pontis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pontis-dev}
+      POSTGRES_DB: pontis
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pontis -d pontis"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGUSER: pontis
+      PGPASSWORD: ${POSTGRES_PASSWORD:-pontis-dev}
+      PGDATABASE: pontis
+    ports:
+      # Host port configurable so the stack can run beside anything already
+      # holding 8000 locally: PONTIS_PORT=8200 docker compose up
+      - "${PONTIS_PORT:-8000}:8000"
+
+volumes:
+  pgdata:

@@ -11,9 +11,18 @@
 --   net_price_by_income -> 1 row per school per IPEDS income band
 --   scholarships        -> 1 row per scholarship (not school-scoped at all)
 --
--- This file is re-runnable: dropping and recreating from scratch is the intended
--- way to rebuild a dev database. Idempotent UPSERTs live in the ingest layer and
--- rely on the UNIQUE constraints declared here.
+-- This file is re-runnable and CONVERGENT: guarded CREATEs, no drops. It was
+-- originally destructive (DROP TYPE/TABLE ... CASCADE, "rebuild from scratch"),
+-- which was fine while it was the only migration -- but once later migrations
+-- added tables that use these enums, re-running the CHAIN turned destructive
+-- in a hidden way: the second containerized boot re-applied this file, and its
+-- DROP TYPE gpa_type CASCADE silently amputated the gpa_type column from
+-- v008's gpa_band_distribution (a table this file never touches). Caught by
+-- the persistent-volume container run; recorded in HARDENING.md. Rebuilding
+-- from scratch is `make clean-db` (dropdb) -- not a migration's job.
+--
+-- Idempotent UPSERTs live in the ingest layer and rely on the UNIQUE
+-- constraints declared here.
 
 BEGIN;
 
@@ -28,40 +37,54 @@ BEGIN;
 --   uc_weighted_capped -> UC scale; honors points capped at 8 semesters, runs >4.0
 --   class_rank_proxy   -> school leans on class rank; GPA may not be published at all
 --   not_published      -> school does not publish this. A real, displayed value.
-DROP TYPE IF EXISTS gpa_type CASCADE;
-CREATE TYPE gpa_type AS ENUM (
-    'unweighted',
-    'uc_weighted_capped',
-    'class_rank_proxy',
-    'not_published'
-);
+DO $$
+BEGIN
+    CREATE TYPE gpa_type AS ENUM (
+        'unweighted',
+        'uc_weighted_capped',
+        'class_rank_proxy',
+        'not_published'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- CDS section C7 rates each factor on exactly this 4-level scale.
-DROP TYPE IF EXISTS factor_importance CASCADE;
-CREATE TYPE factor_importance AS ENUM (
-    'very_important',
-    'important',
-    'considered',
-    'not_considered'
-);
+DO $$
+BEGIN
+    CREATE TYPE factor_importance AS ENUM (
+        'very_important',
+        'important',
+        'considered',
+        'not_considered'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- not_a_separate_admit is the important one: at a holistic school like BC you are
 -- admitted to the college, not the major, so "how competitive is this major" is a
 -- category error rather than an unknown. That is different from
 -- unknown_not_published, which means the school gates by major but won't say how hard.
-DROP TYPE IF EXISTS major_competitiveness CASCADE;
-CREATE TYPE major_competitiveness AS ENUM (
-    'very_competitive',
-    'standard',
-    'not_a_separate_admit',
-    'unknown_not_published'
-);
+DO $$
+BEGIN
+    CREATE TYPE major_competitiveness AS ENUM (
+        'very_competitive',
+        'standard',
+        'not_a_separate_admit',
+        'unknown_not_published'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END
+$$;
 
 -- ---------------------------------------------------------------------------
 -- colleges
 -- ---------------------------------------------------------------------------
-DROP TABLE IF EXISTS colleges CASCADE;
-CREATE TABLE colleges (
+CREATE TABLE IF NOT EXISTS colleges (
     id                   INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name                 TEXT    NOT NULL,
     state                CHAR(2) NOT NULL,
@@ -84,8 +107,7 @@ CREATE TABLE colleges (
 -- ---------------------------------------------------------------------------
 -- admission_stats  — one row per school PER YEAR
 -- ---------------------------------------------------------------------------
-DROP TABLE IF EXISTS admission_stats CASCADE;
-CREATE TABLE admission_stats (
+CREATE TABLE IF NOT EXISTS admission_stats (
     id              INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     college_id      INTEGER NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
 
@@ -125,15 +147,14 @@ CREATE TABLE admission_stats (
     )
 );
 
-CREATE INDEX admission_stats_college_idx ON admission_stats (college_id, year DESC);
+CREATE INDEX IF NOT EXISTS admission_stats_college_idx ON admission_stats (college_id, year DESC);
 
 -- ---------------------------------------------------------------------------
 -- admission_factors — CREATED IN PHASE 1, POPULATED IN PHASE 2
 -- ---------------------------------------------------------------------------
 -- Intentionally left empty. The matching engine must produce correct results with
 -- zero rows here; Phase 2 data ENHANCES explanations without an engine rewrite.
-DROP TABLE IF EXISTS admission_factors CASCADE;
-CREATE TABLE admission_factors (
+CREATE TABLE IF NOT EXISTS admission_factors (
     id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     college_id    INTEGER NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
     factor_name   TEXT NOT NULL,           -- e.g. 'Academic GPA', 'Rigor of record'
@@ -147,8 +168,7 @@ CREATE TABLE admission_factors (
 -- ---------------------------------------------------------------------------
 -- majors — one row per school per major
 -- ---------------------------------------------------------------------------
-DROP TABLE IF EXISTS majors CASCADE;
-CREATE TABLE majors (
+CREATE TABLE IF NOT EXISTS majors (
     id               INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     college_id       INTEGER NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
     major_name       TEXT NOT NULL,
@@ -176,8 +196,7 @@ CREATE TABLE majors (
 -- ---------------------------------------------------------------------------
 -- net_price_by_income — one row per school per IPEDS income band
 -- ---------------------------------------------------------------------------
-DROP TABLE IF EXISTS net_price_by_income CASCADE;
-CREATE TABLE net_price_by_income (
+CREATE TABLE IF NOT EXISTS net_price_by_income (
     id            INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     college_id    INTEGER NOT NULL REFERENCES colleges(id) ON DELETE CASCADE,
 
@@ -200,8 +219,7 @@ CREATE TABLE net_price_by_income (
 -- ---------------------------------------------------------------------------
 -- scholarships — curated, small, deliberately NOT school-scoped
 -- ---------------------------------------------------------------------------
-DROP TABLE IF EXISTS scholarships CASCADE;
-CREATE TABLE scholarships (
+CREATE TABLE IF NOT EXISTS scholarships (
     id                      INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     name                    TEXT NOT NULL,
     provider                TEXT NOT NULL,

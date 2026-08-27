@@ -92,16 +92,32 @@ ALTER TABLE admission_stats
 -- may now satisfy it with EITHER a point average OR a percentile range, which
 -- is what makes Berkeley's published 4.16-4.28 storable without inventing a
 -- midpoint. not_published still means all three number columns are empty.
-ALTER TABLE admission_stats
-    DROP CONSTRAINT IF EXISTS admission_stats_gpa_honesty;
-ALTER TABLE admission_stats
-    ADD CONSTRAINT admission_stats_gpa_honesty CHECK (
-        (gpa_type = 'not_published'
-             AND gpa_value IS NULL AND gpa_p25 IS NULL AND gpa_p75 IS NULL)
-     OR (gpa_type = 'class_rank_proxy')
-     OR (gpa_type IN ('unweighted', 'uc_weighted_capped')
-             AND (gpa_value IS NOT NULL
-                  OR (gpa_p25 IS NOT NULL AND gpa_p75 IS NOT NULL)))
-    );
+--
+-- Added ONLY IF ABSENT, not drop-and-re-add: v007 later widens this same
+-- constraint again (the 'weighted' scale), so on an already-migrated database
+-- a re-run of this file must not rewind it to the narrower version here --
+-- that version would reject rows (UMass's weighted 4.05) that are legal under
+-- the constraint's current owner. On a fresh database this adds the v002
+-- version and v007 replaces it in turn. (Chain-convergence lesson; see
+-- HARDENING.md.)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'admission_stats_gpa_honesty'
+          AND conrelid = 'admission_stats'::regclass
+    ) THEN
+        ALTER TABLE admission_stats
+            ADD CONSTRAINT admission_stats_gpa_honesty CHECK (
+                (gpa_type = 'not_published'
+                     AND gpa_value IS NULL AND gpa_p25 IS NULL AND gpa_p75 IS NULL)
+             OR (gpa_type = 'class_rank_proxy')
+             OR (gpa_type IN ('unweighted', 'uc_weighted_capped')
+                     AND (gpa_value IS NOT NULL
+                          OR (gpa_p25 IS NOT NULL AND gpa_p75 IS NOT NULL)))
+            );
+    END IF;
+END
+$$;
 
 COMMIT;

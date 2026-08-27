@@ -47,6 +47,22 @@ GA_STUDENT = {
 }
 
 
+def require_batch_roster(client):
+    """Skip -- never silently pass -- where only the curated seeds are loaded.
+
+    The batch pipeline needs the (large, gitignored) Scorecard CSV, so CI and
+    the container run against the curated five schools alone. Tests that
+    exercise batch-ingested schools state that dependency instead of failing
+    confusingly or passing vacuously.
+    """
+    names = {s["name"] for s in client.get("/api/schools").json()["schools"]}
+    if "Harvard University" not in names:
+        pytest.skip(
+            "batch pipeline has not been run against this database "
+            "(ingest/pipeline.py needs the College Scorecard CSV)"
+        )
+
+
 def test_health(client):
     response = client.get("/api/health")
     assert response.status_code == 200
@@ -105,6 +121,7 @@ def test_unknown_cost_is_a_rendered_state_not_a_blank(client):
 def test_batch_school_without_stats_is_our_gap_not_theirs(client):
     """A pipeline-ingested school with no curated admissions row must say the
     gap is Pontis's."""
+    require_batch_roster(client)
     payload = client.post("/api/match", json=GA_STUDENT).json()
     everything = payload["on_your_list"] + payload["not_on_your_list"]
     harvard = next(e for e in everything if e["school_name"] == "Harvard University")
@@ -119,6 +136,7 @@ def test_batch_school_without_stats_is_our_gap_not_theirs(client):
 
 def test_negative_net_price_flows_through(client):
     """MIT for a low-income student: affordable, with the negative price shown."""
+    require_batch_roster(client)
     payload = client.post("/api/match", json=GA_STUDENT).json()
     mit = next(
         entry for entry in payload["on_your_list"]
@@ -143,7 +161,14 @@ def test_definitional_rejections_surface_as_422(client):
 def test_schools_endpoint_reports_data_coverage(client):
     payload = client.get("/api/schools").json()
     by_name = {s["name"]: s for s in payload["schools"]}
-    assert len(by_name) >= 22
+    assert len(by_name) >= 5
     assert by_name["Georgia State University"]["has_band_distribution"] is True
-    assert by_name["Harvard University"]["has_admissions_data"] is False
     assert by_name["Boston College"]["meets_full_need"] is True
+
+
+def test_schools_endpoint_reports_batch_coverage(client):
+    require_batch_roster(client)
+    payload = client.get("/api/schools").json()
+    by_name = {s["name"]: s for s in payload["schools"]}
+    assert len(by_name) >= 22
+    assert by_name["Harvard University"]["has_admissions_data"] is False
