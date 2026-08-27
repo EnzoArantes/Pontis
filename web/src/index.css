@@ -1,0 +1,145 @@
+:root {
+  --ink: #1e2430;
+  --muted: #5b6472;
+  --paper: #f7f6f2;
+  --card: #ffffff;
+  --line: #e3e0d8;
+  --accent: #1f5f8b;
+  --good: #1c7c4d;
+  --warn: #a3541a;
+  --bad: #9c3532;
+  font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+.app {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+}
+
+.masthead h1 {
+  font-size: 2.4rem;
+  margin: 0 0 0.25rem;
+  letter-spacing: 0.01em;
+}
+.masthead p { color: var(--muted); max-width: 46rem; margin-top: 0; }
+
+/* ---- form ---- */
+.profile-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.9rem 1.1rem;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+}
+.field { display: flex; flex-direction: column; gap: 0.3rem; }
+.field label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+.field input, .field select {
+  font: inherit;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+}
+.profile-form button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 6px;
+  padding: 0.6rem 1.4rem;
+  cursor: pointer;
+}
+.profile-form button:disabled { opacity: 0.6; cursor: wait; }
+
+/* ---- ceiling ---- */
+.ceiling {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.75rem;
+}
+.ceiling h2 { margin: 0 0 0.5rem; font-size: 1.25rem; }
+.ceiling p { margin: 0.4rem 0; }
+.fine-print { color: var(--muted); font-size: 0.85rem; }
+
+/* ---- sections ---- */
+section h2 { margin: 1.75rem 0 0.25rem; font-size: 1.3rem; }
+.section-note { color: var(--muted); margin-top: 0.15rem; max-width: 46rem; }
+.subhead { margin: 1.25rem 0 0.5rem; font-size: 1.02rem; color: var(--ink); }
+.empty { color: var(--muted); font-style: italic; }
+.error {
+  color: var(--bad);
+  background: #faecec;
+  border: 1px solid #eccfcf;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+/* ---- school cards ---- */
+.school-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  margin: 0.7rem 0;
+}
+.school-card header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.9rem;
+  justify-content: space-between;
+}
+.school-card h3 { margin: 0; font-size: 1.05rem; }
+.pills { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.pill {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.admissions-guaranteed { background: #e0f2e9; color: var(--good); }
+.admissions-likely     { background: #e4efe6; color: var(--good); }
+.admissions-target     { background: #e8eef7; color: var(--accent); }
+.admissions-reach      { background: #f7ecdf; color: var(--warn); }
+.admissions-holistic_review,
+.admissions-context_not_placed,
+.admissions-unable_to_assess,
+.admissions-unable_to_assess_on_gpa {
+  background: #efedea; color: var(--muted);
+}
+
+.afford-affordable   { background: #e0f2e9; color: var(--good); }
+.afford-unaffordable { background: #f9e7e6; color: var(--bad); }
+.afford-unknown      { background: #efedea; color: var(--muted); border-style: dashed; border-color: #c9c4b8; }
+
+.reason { margin: 0.6rem 0 0.2rem; line-height: 1.45; }
+.afford-reason { color: var(--muted); font-size: 0.92rem; margin-top: 0.35rem; }
+
+.callout {
+  border-left: 3px solid var(--accent);
+  background: #f2f5f9;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.92rem;
+  margin: 0.6rem 0 0.2rem;
+}
+.callout.good { border-left-color: var(--good); background: #eef7f1; }

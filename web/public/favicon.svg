@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- pons: a bridge -->
+  <rect width="32" height="32" rx="6" fill="#1f5f8b"/>
+  <path d="M4 22 Q16 8 28 22" stroke="#f7f6f2" stroke-width="2.5" fill="none"/>
+  <line x1="4" y1="22" x2="28" y2="22" stroke="#f7f6f2" stroke-width="2"/>
+  <line x1="10" y1="22" x2="10" y2="16.6" stroke="#f7f6f2" stroke-width="1.6"/>
+  <line x1="16" y1="22" x2="16" y2="14.2" stroke="#f7f6f2" stroke-width="1.6"/>
+  <line x1="22" y1="22" x2="22" y2="16.6" stroke="#f7f6f2" stroke-width="1.6"/>
+</svg>

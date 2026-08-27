@@ -217,7 +217,13 @@ class School:
     state: str
     is_public: bool
     meets_full_need: bool
-    gpa: SchoolGpaData
+
+    # None means NO admissions statistics have been ingested for this school
+    # yet -- our gap, not the school's. Distinct from gpa_type='not_published',
+    # which is a verified fact about what the school publishes. The engine
+    # renders the two differently because blaming the school for our missing
+    # ingestion would be its own small dishonesty.
+    gpa: Optional[SchoolGpaData] = None
 
     # (income_band, residency value) -> avg net price. A MISSING key means no
     # published figure, which is materially different from a zero.
@@ -855,6 +861,18 @@ def assess_admissions(
     so the ordinary two-argument call still works.
     """
     school_gpa = school.gpa
+
+    if school_gpa is None:
+        # Our ingestion gap, stated as ours -- see the School.gpa comment.
+        return AdmissionsAssessment(
+            category=AdmissionsCategory.UNABLE_TO_ASSESS_ON_GPA,
+            reason=(
+                "No admissions statistics have been ingested for this school "
+                "yet, so no admissions read is offered. This is a gap in "
+                "Pontis's data, not a statement about what the school publishes."
+            ),
+            basis="no_data_ingested",
+        )
 
     if school_gpa.gpa_type == "not_published":
         # No GPA, but a published class-rank distribution is still a real signal.

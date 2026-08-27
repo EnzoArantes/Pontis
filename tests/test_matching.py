@@ -309,6 +309,26 @@ def test_rank_distribution_never_returns_likely(reference, boston_college):
         )
 
 
+def test_school_with_nothing_ingested_is_our_gap_not_theirs(reference):
+    """gpa=None means Pontis has not ingested admissions data. That must
+    surface as OUR gap -- never as 'this school does not publish', which is a
+    different (and here unverified) claim about the school."""
+    school = School(
+        name="Batch-Only U", state="MA", is_public=False, meets_full_need=False,
+        gpa=None, net_prices={("0-30k", "not_applicable"): D(4000)},
+    )
+    student = Student(
+        state="MA", region="contiguous", family_income=D(28_000), family_size=4,
+        gpa_value=D("3.900"), gpa_scale="unweighted",
+    )
+    result = assess_admissions(student, school)
+
+    assert result.category is AdmissionsCategory.UNABLE_TO_ASSESS_ON_GPA
+    assert result.basis == "no_data_ingested"
+    assert "gap in Pontis's data" in result.reason
+    assert "does not publish" not in result.reason
+
+
 # ---------------------------------------------------------------------------
 # Required case 5 — a normal, in-range, affordable school
 # ---------------------------------------------------------------------------
