@@ -1,5 +1,7 @@
 # Pontis
 
+[![ci](https://github.com/EnzoArantes/pontis/actions/workflows/ci.yml/badge.svg)](https://github.com/EnzoArantes/pontis/actions/workflows/ci.yml)
+
 *Pontis (Latin, genitive of pons: "of the bridge").* A college-matching tool
 for low-income students: which schools can you both **get into** and
 **afford** — two separate questions, answered separately, never blended into
